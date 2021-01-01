@@ -1,7 +1,7 @@
 ﻿Set-StrictMode -Version "latest"
 Clear-Host
 
-$latestReleaseJson = Invoke-WebRequest -Uri "https://api.github.com/repos/microsoft/cascadia-code/releases/latest" | ConvertFrom-Json
+$latestReleaseJson = Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/repos/microsoft/cascadia-code/releases/latest" | ConvertFrom-Json
 if ($null -ne $latestReleaseJson)
 {
     Write-Host "latest release: `"$($latestReleaseJson.name)`""
