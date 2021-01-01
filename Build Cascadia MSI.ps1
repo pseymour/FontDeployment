@@ -1,5 +1,4 @@
 ﻿Set-StrictMode -Version "latest"
-Clear-Host
 
 $latestReleaseJson = Invoke-WebRequest -UseBasicParsing -Uri "https://api.github.com/repos/microsoft/cascadia-code/releases/latest" | ConvertFrom-Json
 if ($null -ne $latestReleaseJson)
@@ -12,19 +11,30 @@ if ($null -ne $latestReleaseJson)
             [string]$workingFolderPath = [System.IO.Path]::GetTempFileName()
             if (Test-Path -Path $workingFolderPath) { Remove-Item -Path $workingFolderPath -Recurse -Force }
             if (!(Test-Path -Path $workingFolderPath)) { New-Item -Path $workingFolderPath -ItemType "Directory" | Out-Null }
-            <#
-            [string]$workingFolderPath = "C:\Users\patrick.seymour\AppData\Local\Temp\tmp6401.tmp"
-            #>
-            Write-Host "working folder: `"$($workingFolderPath)`""
 
             [string]$outputFilePath = Join-Path $workingFolderPath $latestReleaseJson.assets[$i].name
             Invoke-WebRequest -Uri $latestReleaseJson.assets[$i].browser_download_url -ContentType $latestReleaseJson.assets[$i].content_type -OutFile $outputFilePath
             if (Test-Path -Path $outputFilePath)
             {
                 Expand-Archive -Path $outputFilePath -DestinationPath $workingFolderPath
+                [string]$versionString = $latestReleaseJson.tag_name
+                $versionString = $versionString -replace "[^0-9\.]", [string]::Empty
+                [int[]]$versionParts = @(1,0,0,0)
+                [string[]]$splitVersionString = @($versionString -split "\.")
+                for ([int]$i = ($versionParts.Length - 1); $i -ge ($versionParts.Length - $splitVersionString.Length); $i--)
+                {
+                    $versionParts[$i] = $splitVersionString[($i - $versionParts.Length)]
+                }
+                $versionString = $versionParts -join "."
+                [Version]$fontVersion = $null
+                if (![Version]::TryParse($versionString, [ref] $fontVersion))
+                {
+                    Write-Error $versionString
+                }
+
                 if (Test-Path -Path (Join-Path $workingFolderPath "ttf"))
                 {
-                    & (Join-Path -Path $PSScriptRoot -ChildPath "Build Font MSI.ps1") -ProductManufacturer "Microsoft" -ProductName $latestReleaseJson.name -FontSourceFolder (Join-Path $workingFolderPath "ttf") -IconPath (Join-Path $PSScriptRoot "icons\ttf.ico") -OutputMSIPath (Join-Path $workingFolderPath "$($latestReleaseJson.name).msi")
+                    & (Join-Path -Path $PSScriptRoot -ChildPath "Build Font MSI.ps1") -ProductManufacturer "Microsoft" -ProductName $latestReleaseJson.name -ProductVersion $fontVersion -UpgradeCode "{F6F91FFC-0807-4CBD-B027-77460BEBABA5}" -FontSourceFolder (Join-Path $workingFolderPath "ttf") -IconPath (Join-Path $PSScriptRoot "icons\ttf.ico") -OutputMSIPath (Join-Path $workingFolderPath "$($latestReleaseJson.name).msi")
                 }
             }
         }

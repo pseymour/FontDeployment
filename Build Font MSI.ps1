@@ -4,11 +4,17 @@
     [String]$ProductManufacturer,
     [Parameter(Mandatory = $true)]
     [String]$ProductName,
+    [Parameter(Mandatory = $false)]
+    [Version]$ProductVersion = [Version]::new(1,0,0,0),
+    [Parameter(Mandatory = $false)]
+    [Guid]$UpgradeCode = (New-Guid),
     [Parameter(Mandatory = $true)]
     [String]$FontSourceFolder,
     [String]$IconPath = (Join-Path $PSScriptRoot "icons\font folder.ico"),
     [Parameter(Mandatory = $true)]
-    [String]$OutputMSIPath
+    [String]$OutputMSIPath,
+    [Parameter(Mandatory = $false)]
+    [Switch]$KeepTempFiles
 )
 
 Set-StrictMode -Version "latest"
@@ -22,7 +28,7 @@ do
     if (Test-Path -Path $outputWxsPath) { Remove-Item -Path $outputWxsPath -Recurse -Force }
     $outputWxsPath = [System.IO.Path]::ChangeExtension($outputWxsPath, "wxs")
 } while (Test-Path -Path $outputWxsPath)
-Write-Output "output .wxs path : `"$($outputWxsPath)`""
+Write-Verbose "output .wxs path : `"$($outputWxsPath)`""
 
 [string]$outputWixObjPath = [string]::Empty
 do
@@ -31,7 +37,7 @@ do
     if (Test-Path -Path $outputWixObjPath) { Remove-Item -Path $outputWixObjPath -Recurse -Force }
     $outputWixObjPath = [System.IO.Path]::ChangeExtension($outputWixObjPath, "wixobj")
 } while (Test-Path -Path $outputWixObjPath)
-Write-Output "output .wixobj path : `"$($outputWixObjPath)`""
+Write-Verbose "output .wixobj path : `"$($outputWixObjPath)`""
 
 [Version]$latestWixVersion = [Version]::new(0,0,0)
 [string]$installRoot = [string]::Empty
@@ -41,10 +47,10 @@ ForEach-Object {
     [Microsoft.Win32.RegistryKey]$subkey = $_
     if ($subkey.GetValueNames() -contains "ProductVersion")
     {
-        [Version]$productVersion = [Version]::new($subkey.GetValue("ProductVersion", "0.0"))
-        if ($productVersion -gt $latestWixVersion)
+        [Version]$productVersionValue = [Version]::new($subkey.GetValue("ProductVersion", "0.0"))
+        if ($productVersionValue -gt $latestWixVersion)
         {
-            $latestWixVersion = $productVersion
+            $latestWixVersion = $productVersionValue
             $installRoot = $subkey.GetValue("InstallRoot", [string]::Empty)
         }
     }
@@ -59,14 +65,15 @@ if (Test-Path -Path $installRoot)
     
     if (Test-Path -Path $heatPath)
     {
-        & $heatPath dir $FontSourceFolder -cg CascadiaCodeFont <# -directoryid FontsFolder #> <# -dr FontsFolder #> -nologo -t $heatTransform -gg <# -sfrag #> -template product -out $outputWxsPath -srd
+        & $heatPath dir $FontSourceFolder -cg ($ProductName -replace "[\s]", [string]::Empty) -nologo -t $heatTransform -gg -template product -out $outputWxsPath -srd
         if (Test-Path -Path $outputWxsPath)
         {
             [xml]$wxsDocument = Get-Content -Path $outputWxsPath
             [hashtable]$productAttributes = @{
                 "Manufacturer" = $ProductManufacturer;
                 "Name" = $ProductName;
-                "UpgradeCode" = (New-Guid).ToString("B").ToUpperInvariant();
+                "Version" = $ProductVersion;
+                "UpgradeCode" = $UpgradeCode.ToString("B").ToUpperInvariant();
             }
             $productAttributes.Keys |
             ForEach-Object {
@@ -89,5 +96,5 @@ if (Test-Path -Path $installRoot)
     }
 }
 
-if (Test-Path -Path $outputWxsPath) { Remove-Item -Path $outputWxsPath -ErrorAction SilentlyContinue }
-if (Test-Path -Path $outputWixObjPath) { Remove-Item -Path $outputWixObjPath -ErrorAction SilentlyContinue }
+if ((Test-Path -Path $outputWxsPath) -and (-not $KeepTempFiles)) { Remove-Item -Path $outputWxsPath -ErrorAction SilentlyContinue }
+if ((Test-Path -Path $outputWixObjPath) -and (-not $KeepTempFiles)) { Remove-Item -Path $outputWixObjPath -ErrorAction SilentlyContinue }
