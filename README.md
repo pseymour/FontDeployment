@@ -8,3 +8,5 @@ The scripts rely on the WiX Toolset (https://wixtoolset.org/).
 * `Build Font MSI.ps1` is a generalized script for making an MSI to install the fonts in a given folder.
 * `Build Cascadia MSI.ps1` is a script specifically for Microsoft's Cascadia Code font (https://github.com/microsoft/cascadia-code).
 The script downloads the latest release and builds an MSI for it.
+* `Build Fira Code MSI.ps1` is a script specifically for Nikita Prokopov's Fira Code font (https://github.com/tonsky/FiraCode/).
+The script downloads the latest release and builds an MSI for it.
