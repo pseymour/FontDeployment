@@ -35,6 +35,7 @@ if ($null -ne $latestReleaseJson)
                 if (Test-Path -Path (Join-Path $workingFolderPath "ttf"))
                 {
                     & (Join-Path -Path $PSScriptRoot -ChildPath "Build Font MSI.ps1") -ProductManufacturer "Microsoft" -ProductName $latestReleaseJson.name -ProductVersion $fontVersion -UpgradeCode "{F6F91FFC-0807-4CBD-B027-77460BEBABA5}" -FontSourceFolder (Join-Path $workingFolderPath "ttf") -IconPath (Join-Path $PSScriptRoot "icons\ttf.ico") -OutputMSIPath (Join-Path $workingFolderPath "$($latestReleaseJson.name).msi")
+                    & explorer.exe $workingFolderPath
                 }
             }
         }
